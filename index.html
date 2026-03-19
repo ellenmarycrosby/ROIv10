@@ -93,4 +93,300 @@ var CPU=18,SM=1.3,HY=2080;
 
 var idMap={"5-10":{l:"5 to 10 hours",lo:5,hi:10},"10-20":{l:"10 to 20 hours",lo:10,hi:20},"20-40":{l:"20 to 40 hours",lo:20,hi:40},"40+":{l:"40+ hours",lo:40,hi:60},"not-sure":{l:"Not sure",lo:10,hi:20}};
 var fixMap={"5-10":{l:"5 to 10 hours",lo:5,hi:10},"10-20":{l:"10 to 20 hours",lo:10,hi:20},"20-40":{l:"20 to 40 hours",lo:20,hi:40},"40+":{l:"40+ hours",lo:40,hi:60},"not-sure":{l:"Not sure",lo:10,hi:20}};
-var aiMap={none:{l:"Not planning this yet",lo:0,hi:0,ot:false},"onetime-sm":{l:"One-time project (under 40 hrs)",lo:10,hi:40,ot:true},"onetime-lg":{l:"One-time project (40 to 100 hrs)",lo:40,hi:100,ot:true},ongoing:{l:"
+var aiMap={none:{l:"Not planning this yet",lo:0,hi:0,ot:false},"onetime-sm":{l:"One-time project (under 40 hrs)",lo:10,hi:40,ot:true},"onetime-lg":{l:"One-time project (40 to 100 hrs)",lo:40,hi:100,ot:true},ongoing:{l:"Ongoing monthly work",lo:5,hi:30,ot:false},"not-sure":{l:"Not sure",lo:10,hi:40,ot:true}};
+var stoMap={lt5k:{l:"Less than $5,000",lo:1000,hi:5000},"5k-15k":{l:"$5,000 to $15,000",lo:5000,hi:15000},"15k-45k":{l:"$15,000 to $45,000",lo:15000,hi:45000},"45k+":{l:"$45,000+",lo:45000,hi:75000},"not-sure":{l:"Not sure",lo:5000,hi:15000}};
+var inMap={lt10:{l:"Less than 10%",lo:.02,hi:.1},"10-25":{l:"10 to 25%",lo:.1,hi:.25},"25-50":{l:"25 to 50%",lo:.25,hi:.5},"50+":{l:"50%+",lo:.5,hi:.8},"not-sure":{l:"Not sure",lo:.1,hi:.25}};
+var matMap={low:{l:"Low",rLo:.35,rHi:.47},medium:{l:"Medium",rLo:.20,rHi:.30},high:{l:"High",rLo:.10,rHi:.17},"not-sure":{l:"Not sure",rLo:.20,rHi:.30}};
+var licMap={basic:{l:"Business Basic or Standard",cost:9},premium:{l:"Business Premium",cost:22},e3:{l:"E3",cost:39},e5:{l:"E5",cost:60},e7:{l:"E7",cost:75},mixed:{l:"Mixed or not sure",cost:22}};
+var optMap={never:{l:"We've never done this",waste:.15},"over-year":{l:"More than a year ago",waste:.12},"within-year":{l:"Within the last year",waste:.08},"not-sure":{l:"Not sure",waste:.12}};
+
+var QS=[
+{id:"userCount",ty:"number",q:"How many licensed Microsoft 365 users are in your tenant?",sub:"No need to count guests or external users.",ph:"e.g. 500",min:1},
+{id:"salary",ty:"salary",q:"What's the approximate annual salary for the IT staff handling governance work?",sub:"",min:1,def:"85000",help:""},
+{id:"q2",ty:"choice",q:"How many hours per month does your team spend identifying broad or unclear access?",sub:"Think exporting CSVs, running PowerShell scripts, cross-referencing admin centers to piece together who has access to what across SharePoint, Teams, Groups, and OneDrive. Investigation only, don't include time spent fixing.",
+opts:[{v:"5-10",l:"5 to 10 hours",d:"Some manual work. Efficient processes or tools keep the detective work manageable."},
+{v:"10-20",l:"10 to 20 hours",d:"Regular manual effort. Someone's always digging through admin centers or running scripts to track down access."},
+{v:"20-40",l:"20 to 40 hours",d:"Substantial manual work. Considerable time each month piecing together access information through exports, scripts, and cross-referencing admin centers."},
+{v:"40+",l:"40+ hours",d:"Significant manual work. Lots of time manually investigating permissions and piecing together access patterns."},
+{v:"not-sure",l:"Not sure"}]},
+{id:"q3",ty:"choice",q:"How many hours per month does your team spend correcting unsafe or excessive access?",sub:"Manually removing sharing links, adjusting permissions, cleaning up guest access across admin centers. The hands-on fixing work only. Don't count investigation time you already reported.",
+opts:[{v:"5-10",l:"5 to 10 hours",d:"Some manual cleanup. Efficient processes help fix issues quickly when they come up."},
+{v:"10-20",l:"10 to 20 hours",d:"Routine manual cleanup. Time allocated each month to address permissions issues and clean up risky access."},
+{v:"20-40",l:"20 to 40 hours",d:"Regular manual remediation. There always seems to be something to clean up, permissions to fix, or risky links to remove."},
+{v:"40+",l:"40+ hours",d:"Heavy manual cleanup work. Significant time spent manually fixing access issues, removing shares, and cleaning up permissions."},
+{v:"not-sure",l:"Not sure"}]},
+{id:"q4",ty:"choice",q:"How much effort is your team investing in AI readiness governance this year?",sub:"Validating permissions before AI rollout, reviewing ownership, checking what Copilot or other AI tools can access. Don't double-count access work already reported. This is AI-specific governance only.",
+opts:[{v:"none",l:"Not planning this yet",d:"We'll tackle AI readiness governance later."},
+{v:"onetime-sm",l:"One-time project (under 40 hrs)",d:"A focused cleanup or audit before AI rollout. Limited scope, not expected to recur monthly."},
+{v:"onetime-lg",l:"One-time project (40 to 100 hrs)",d:"A significant pre-AI governance project. Validating permissions and ownership at scale before enabling Copilot or other AI tools."},
+{v:"ongoing",l:"Ongoing monthly work",d:"AI readiness is a recurring effort. Continuous permission validation, ownership reviews, and AI exposure monitoring month over month."},
+{v:"not-sure",l:"Not sure"}]},
+{id:"q5",ty:"choice",q:"What new storage spend will you add in the coming year on top of what you paid last year?",sub:"The projected additional cost as Teams, SharePoint, and OneDrive usage grows. Not your total current storage bill.",
+opts:[{v:"lt5k",l:"Less than $5,000",d:"Modest growth costs. Not anticipating major storage expansion this year."},
+{v:"5k-15k",l:"$5,000 to $15,000",d:"Steady growth costs. Budgeted for moderate additional expenses."},
+{v:"15k-45k",l:"$15,000 to $45,000",d:"Noticeable storage costs. Growth is steady and the increasing expense is being tracked."},
+{v:"45k+",l:"$45,000+",d:"Significant storage investment. Substantial additional storage costs expected this year."},
+{v:"not-sure",l:"Not sure"}]},
+{id:"q6",ty:"choice",q:"What percentage of that storage growth comes from inactive or outdated content?",sub:"Your best guess at how much growth comes from abandoned teams, duplicate sites, or workspaces that nobody manages anymore.",
+opts:[{v:"lt10",l:"Less than 10%",d:"Pretty clean environment. Most storage growth comes from active, managed workspaces."},
+{v:"10-25",l:"10 to 25%",d:"Some digital clutter. Abandoned workspaces and duplicates eating up storage, but it's not terrible."},
+{v:"25-50",l:"25 to 50%",d:"Digital mess is piling up. A good chunk of storage growth comes from redundant, obsolete, and trivial content."},
+{v:"50+",l:"50%+",d:"Sprawl is a real problem. Lots of forgotten, duplicate, or orphaned workspaces taking up expensive storage space."},
+{v:"not-sure",l:"Not sure"}]},
+{id:"q7",ty:"choice",q:"How would you describe your tenant's governance maturity?",sub:"",
+opts:[{v:"low",l:"Low",d:"We react to problems when they pop up, but don't have formal governance processes in place."},
+{v:"medium",l:"Medium",d:"We've got some processes and can see what's happening, but enforcement is inconsistent."},
+{v:"high",l:"High",d:"Good processes, decent visibility, and consistent governance, though it still takes some manual work to keep things clean."},
+{v:"not-sure",l:"Not sure"}]},
+{id:"licTier",ty:"choice",q:"What license tier do most of your users have?",sub:"Microsoft is raising M365 prices in July 2026, so license optimization is more urgent than ever.",
+opts:[{v:"basic",l:"Business Basic or Standard"},{v:"premium",l:"Business Premium"},{v:"e3",l:"E3"},{v:"e5",l:"E5"},{v:"e7",l:"E7"},{v:"mixed",l:"Mixed or not sure"}]},
+{id:"licOpt",ty:"choice",q:"When was the last time someone checked whether your users actually need the license tier they're assigned?",sub:"",
+opts:[{v:"never",l:"We've never done this"},{v:"over-year",l:"More than a year ago"},{v:"within-year",l:"Within the last year"},{v:"not-sure",l:"Not sure"}]}
+];
+
+var TOTAL=QS.length;
+
+function countNotSure(a){
+var count=0;
+if(a.q2==='not-sure')count++;
+if(a.q3==='not-sure')count++;
+if(a.q4==='not-sure')count++;
+if(a.q5==='not-sure')count++;
+if(a.q6==='not-sure')count++;
+if(a.q7==='not-sure')count++;
+if(a.licOpt==='not-sure')count++;
+return count;
+}
+
+function calc(a){
+var mat=matMap[a.q7]||matMap.medium;
+var pLo=mat.rLo,pHi=mat.rHi;
+var q2=idMap[a.q2]||idMap["5-10"],q3=fixMap[a.q3]||fixMap["5-10"];
+var q4=aiMap[a.q4]||aiMap.none,q5=stoMap[a.q5]||stoMap.lt5k,q6=inMap[a.q6]||inMap.lt10;
+var sal=Number(a.salary)||85000,users=Number(a.userCount)||0;
+var hr=(sal*SM)/HY;
+var lic=licMap[a.licTier]||licMap.mixed;
+var opt=optMap[a.licOpt]||optMap["not-sure"];
+
+function bk(m,ann){var x=ann?12:1;return{lo:m.lo*x*hr*pLo,hi:m.hi*x*hr*pHi,hlo:m.lo*x*pLo,hhi:m.hi*x*pHi};}
+var id=bk(q2,true),fx=bk(q3,true),ai=bk(q4,!q4.ot);
+var ov={slo:id.lo+fx.lo,shi:id.hi+fx.hi,hlo:id.hlo+fx.hlo,hhi:id.hhi+fx.hhi};
+var cp={slo:ai.lo,shi:ai.hi,hlo:ai.hlo,hhi:ai.hhi};
+
+var stRL=Math.min(pLo,0.15),stRH=Math.min(pHi,0.15);
+var st={slo:q5.lo*q6.lo*stRL,shi:q5.hi*q6.hi*stRH};
+
+var wasteAdj=opt.waste;
+if(users>5000)wasteAdj=opt.waste*0.50;
+else if(users>1000)wasteAdj=opt.waste*0.75;
+var licBase=users*lic.cost*12*wasteAdj*0.50;
+var li={slo:licBase*0.8,shi:licBase*1.2};
+
+var tlo=ov.slo+cp.slo+st.slo+li.slo;
+var thi=ov.shi+cp.shi+st.shi+li.shi;
+var thlo=ov.hlo+cp.hlo,thhi=ov.hhi+cp.hhi;
+var ac=users*CPU,avg=(tlo+thi)/2;
+var roi=ac>0?Math.round((avg-ac)/ac*100):null;
+var pb=null;if(avg>0&&ac>0){var m=ac/avg*12;pb=m>12?"> 12 months":Math.round(m)+" months";}
+return{tlo:tlo,thi:thi,thlo:thlo,thhi:thhi,ac:ac,nlo:tlo-ac,nhi:thi-ac,roi:roi,pb:pb,ml:(mat).l||"",ov:ov,cp:cp,st:st,li:li};
+}
+
+function fD(n){var v=Math.round(n);if(v<0)return"-$"+Math.abs(v).toLocaleString("en-US");return"$"+v.toLocaleString("en-US");}
+function fRpos(a,b){return Math.max(0,Math.round(a))===Math.max(0,Math.round(b))?fD(Math.max(0,a)):fD(Math.max(0,a))+" to "+fD(Math.max(0,b));}
+function fR(a,b){a=Math.round(a);b=Math.round(b);return a===b?fD(a):fD(a)+" to "+fD(b);}
+function fH(a,b){a=Math.round(a);b=Math.round(b);return a===b?a.toLocaleString():a.toLocaleString()+" to "+b.toLocaleString();}
+
+function getProgressPercent(step){
+var weights=[18,14,12,11,10,9,8,7,6,5];
+var total=0;
+for(var i=0;i<=step&&i<weights.length;i++)total+=weights[i];
+return total;
+}
+
+var app=document.getElementById("app");
+var step=0,ans={},view="quiz",editOpen=false;
+function go(){if(view==="quiz")renderQuiz();else renderResults();}
+
+function renderQuiz(){
+var q=QS[step],pct=getProgressPercent(step);
+var cv=ans[q.id]||"";
+var isLast=step===TOTAL-1;
+var valid=false;
+if(q.ty==="choice")valid=!!cv;
+else if(q.ty==="number")valid=cv!==""&&Number(cv)>=q.min;
+else if(q.ty==="salary"){if(!cv&&q.def){ans[q.id]=q.def;cv=q.def;}valid=cv!==""&&Number(cv)>=q.min;}
+
+var h='<div class="quiz-head"></div>';
+h+='<div class="quiz-body"><h2 class="q">'+q.q+'</h2>';
+if(q.sub)h+='<p class="sub">'+q.sub+'</p>';
+if(q.ty==="choice"){
+h+='<div class="opts">';
+for(var i=0;i<q.opts.length;i++){var o=q.opts[i],sel=cv===o.v;
+h+='<button class="opt'+(sel?' sel':'')+'" data-v="'+o.v+'"><div class="dot">'+(sel?'<div class="dot-inner"></div>':'')+'</div><div class="opt-text"><strong>'+o.l+'</strong>'+(o.d?'<span>'+o.d+'</span>':'')+'</div></button>';}
+h+='</div>';
+}else if(q.ty==="number"){
+h+='<div class="inp-wrap"><input class="inp" type="text" inputmode="numeric" value="'+cv+'" placeholder="'+(q.ph||"")+'" id="qi"></div>';
+}else if(q.ty==="salary"){
+h+='<div class="inp-wrap"><span class="inp-prefix">$</span><input class="inp has-pre" type="text" inputmode="numeric" value="'+cv+'" id="qi"></div>';
+if(q.help)h+='<p class="helper">'+q.help+'</p>';
+}
+
+h+='<div class="nav">';
+if(step>0)h+='<button class="btn2" id="bk">Back</button>';
+h+='<button class="btn" id="nx"'+(valid?'':' disabled')+'>'+(isLast?'See my results':'Next')+'</button>';
+h+='</div></div>';
+h+='<div class="progress"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
+app.innerHTML=h;
+
+var opts=app.querySelectorAll('.opt');
+for(var i=0;i<opts.length;i++){opts[i].addEventListener('click',function(){ans[QS[step].id]=this.getAttribute('data-v');go();});}
+var qi=document.getElementById('qi');
+if(qi){
+qi.focus();
+qi.addEventListener('input',function(){
+ans[QS[step].id]=this.value.replace(/[^0-9]/g,'');
+var nx=document.getElementById('nx');
+var v=ans[QS[step].id];
+var ok=v!==""&&Number(v)>=QS[step].min;
+if(nx){if(ok)nx.removeAttribute('disabled');else nx.setAttribute('disabled','');}
+});
+qi.addEventListener('keydown',function(e){
+if(e.key==='Enter'){
+var nx=document.getElementById('nx');
+if(nx&&!nx.hasAttribute('disabled'))nx.click();
+}
+});
+}
+var nx=document.getElementById('nx');
+if(nx){nx.addEventListener('click',function(){if(this.hasAttribute('disabled'))return;if(isLast){view="results";go();}else{step++;go();}});}
+var bk=document.getElementById('bk');
+if(bk){bk.addEventListener('click',function(){if(step>0){step--;go();}});}
+}
+
+function renderResults(){
+var r=calc(ans);
+var notSureCount=countNotSure(ans);
+var bkts=[
+{k:"ov",lbl:"Cleaning up who has access to what",avg:(r.ov.slo+r.ov.shi)/2,lo:r.ov.slo,hi:r.ov.shi,hrs:{lo:r.ov.hlo,hi:r.ov.hhi},c:"orange"},
+{k:"cp",lbl:"Getting ready for Copilot without the risk",avg:(r.cp.slo+r.cp.shi)/2,lo:r.cp.slo,hi:r.cp.shi,hrs:{lo:r.cp.hlo,hi:r.cp.hhi},c:"lilac"},
+{k:"st",lbl:"Removing inactive workspaces and stale content",avg:(r.st.slo+r.st.shi)/2,lo:r.st.slo,hi:r.st.shi,hrs:null,c:"lime"},
+{k:"li",lbl:"Rightsizing unused and over-provisioned licenses",avg:(r.li.slo+r.li.shi)/2,lo:r.li.slo,hi:r.li.shi,hrs:null,c:"orange"}
+];
+var tavg=(r.tlo+r.thi)/2;
+var big=bkts[0];for(var i=1;i<bkts.length;i++){if(bkts[i].avg>big.avg)big=bkts[i];}
+var bigPct=tavg>0?Math.round(big.avg/tavg*100):0;
+var maxA=0;for(var i=0;i<bkts.length;i++){if(bkts[i].avg>maxA)maxA=bkts[i].avg;}
+
+var h='<div class="res" id="res-content">';
+h+='<button class="edit-toggle" id="toggle-edit"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 9.5V12h2.5l6.9-6.9-2.5-2.5L1 9.5z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+h+='Change answers <svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="transition:transform .2s;transform:rotate('+(editOpen?'180':'0')+'deg)"><path d="M2.5 4l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+
+if(editOpen){
+h+='<div class="edit-panel"><div class="edit-grid">';
+h+='<div class="ef"><label>1. Users in tenant</label><input type="text" inputmode="numeric" value="'+(ans.userCount||'')+'" data-k="userCount"></div>';
+h+='<div class="ef"><label>2. Annual IT salary</label><div style="position:relative;display:flex;align-items:center"><span style="position:absolute;left:10px;font-size:13px;color:var(--g500)">$</span><input type="text" inputmode="numeric" value="'+(ans.salary||'')+'" data-k="salary" style="padding-left:22px"></div></div>';
+var eMaps=[{k:"q2",l:"3. Identification hrs/mo",m:idMap},{k:"q3",l:"4. Remediation hrs/mo",m:fixMap},{k:"q4",l:"5. AI readiness effort",m:aiMap},{k:"q5",l:"6. Incremental storage",m:stoMap},{k:"q6",l:"7. Inactive content %",m:inMap},{k:"q7",l:"8. Governance maturity",m:matMap}];
+for(var ei=0;ei<eMaps.length;ei++){var em=eMaps[ei];
+h+='<div class="ef"><label>'+em.l+'</label><div style="position:relative"><select data-k="'+em.k+'">';
+var keys=Object.keys(em.m);for(var ej=0;ej<keys.length;ej++){var ek=keys[ej],el=em.m[ek].l;
+h+='<option value="'+ek+'"'+(ans[em.k]===ek?' selected':'')+'>'+el+'</option>';}
+h+='</select><div style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--g500);pointer-events:none"></div></div></div>';}
+h+='<div class="ef"><label>9. License tier</label><div style="position:relative"><select data-k="licTier">';
+var lk=Object.keys(licMap);for(var li=0;li<lk.length;li++){h+='<option value="'+lk[li]+'"'+(ans.licTier===lk[li]?' selected':'')+'>'+licMap[lk[li]].l+'</option>';}
+h+='</select><div style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--g500);pointer-events:none"></div></div></div>';
+h+='<div class="ef"><label>10. License review</label><div style="position:relative"><select data-k="licOpt">';
+var ok2=Object.keys(optMap);for(var oi=0;oi<ok2.length;oi++){h+='<option value="'+ok2[oi]+'"'+(ans.licOpt===ok2[oi]?' selected':'')+'>'+optMap[ok2[oi]].l+'</option>';}
+h+='</select><div style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--g500);pointer-events:none"></div></div></div>';
+h+='</div></div>';}
+
+h+='<div class="hero-area"><div class="hero-eyebrow">Estimated annual savings</div>';
+h+='<div class="hero-amount">'+fRpos(r.tlo,r.thi)+'</div>';
+h+='<div class="hero-kpis">';
+h+='<div class="hero-kpi"><div class="hero-kpi-label">Hours reclaimed</div><div class="hero-kpi-val" style="color:#FF5500">'+fH(r.thlo,r.thhi)+'</div></div>';
+h+='<div class="hero-kpi"><div class="hero-kpi-label">ROI</div><div class="hero-kpi-val" style="color:#B4ABFF">'+(r.roi!==null?r.roi+'%':'N/A')+'</div></div>';
+h+='<div class="hero-kpi"><div class="hero-kpi-label">Payback</div><div class="hero-kpi-val" style="color:#CCFF00">'+(r.pb||'N/A')+'</div></div>';
+h+='</div></div>';
+
+h+='<div class="section-label">Savings breakdown</div><div class="breakdown">';
+if(tavg>0){h+='<div class="biggest"><div class="biggest-label">Biggest opportunity</div>';
+h+='<div class="biggest-text">Most of your savings come from <strong>'+big.lbl.toLowerCase()+'</strong>. That\'s <strong>'+bigPct+'%</strong> of your total estimated value.</div></div>';}
+for(var i=0;i<bkts.length;i++){var b=bkts[i];
+var pct=maxA>0?Math.max(4,Math.round(b.avg/maxA*100)):0;
+var bpct=tavg>0?Math.round(b.avg/tavg*100):0;
+h+='<div class="bk-item"><div class="bk-row"><span class="bk-label">'+b.lbl+'</span><span class="bk-value">'+fRpos(b.lo,b.hi)+'</span></div>';
+h+='<div class="bk-track"><div class="bk-fill '+b.c+'" style="width:'+pct+'%"></div></div>';
+var meta=bpct+'% of total';
+if(b.hrs)meta+=' · '+fH(Math.round(b.hrs.lo),Math.round(b.hrs.hi))+' hrs reclaimed';
+h+='<div class="bk-meta">'+meta+'</div></div>';}
+h+='</div>';
+
+h+='<div class="cost-card">';
+h+='<div class="cost-row"><span class="cost-label">Annual Protect cost ('+Number(ans.userCount).toLocaleString()+' users × $'+CPU+'/user)</span><span class="cost-val">'+fD(r.ac)+'</span></div>';
+h+='<div class="cost-divider"></div>';
+h+='<div class="cost-row cost-row-big"><span class="cost-label">Net annual value</span><span class="cost-val pos">'+fRpos(r.nlo,r.nhi)+'</span></div></div>';
+
+var isNeg=r.nhi<=0;
+var isBorderline=r.nlo<0&&r.nhi>0;
+var needsMsg=isNeg||isBorderline;
+
+var ctaHeader='See what this looks like in your tenant';
+var ctaBody='These are just ballpark estimates. <span class="screen-only">Talk to a ShareGate expert to get a more tailored number based on what\'s actually happening in your Microsoft 365 environment.</span><span class="print-only">For a tailored assessment of your tenant, reach out to us at sharegate.com/contact</span>';
+var ctaBtn='Book a call';
+var ctaLink='https://sharegate.com/contact';
+
+if(needsMsg){
+var isHighMat=ans.q7==='high';
+var isLowMat=ans.q7==='low';
+var isSmall=(Number(ans.userCount)||0)<300&&ans.licTier==='basic'&&ans.q5==='lt5k';
+var lowOpts=['5-10','10-20','not-sure'];
+var lowAiOpts=['none','onetime-sm','not-sure'];
+var lowStoOpts=['lt5k','5k-15k','not-sure'];
+var lowInOpts=['lt10','10-25','not-sure'];
+var hasLowInputs=(lowOpts.indexOf(ans.q2)>=0||lowOpts.indexOf(ans.q3)>=0||lowAiOpts.indexOf(ans.q4)>=0||(lowStoOpts.indexOf(ans.q5)>=0&&lowInOpts.indexOf(ans.q6)>=0));
+
+if(notSureCount>=3){
+ctaHeader='We need more detail';
+ctaBody='You selected "Not sure" on several questions, which means this estimate is based on typical benchmarks rather than your actual environment. The real opportunity in your tenant could be significantly higher. <span class="screen-only">A quick conversation with a ShareGate expert can help you get a clearer picture.</span><span class="print-only">For a tailored assessment of your tenant, reach out to us at sharegate.com/contact</span>';
+ctaBtn='Get a clearer picture';
+}else if(isSmall){
+ctaHeader='When your environment is small, your time matters even more';
+ctaBody='Even in smaller tenants, governance takes time. And it\'s usually handled by someone already wearing multiple hats. Switching between tasks, tools, and admin centers slows everything down.\n\nProtect gives you one clear place to manage it all so you can move faster and get back to higher-impact work. <span class="screen-only">This calculator just gives a high-level estimate. Talk to a ShareGate expert for a deeper look at your tenant.</span><span class="print-only">For a tailored assessment of your tenant, reach out to us at sharegate.com/contact</span>';
+ctaBtn='Book a call';
+}else if(isHighMat&&hasLowInputs){
+ctaHeader='You\'ve built strong processes. Protect keeps them simple.';
+ctaBody='Orgs with mature governance often rely on a mix of tools, scripts, and manual checks to keep things running. Protect streamlines that patchwork into one place so you can see what matters and act fast.\n\nThe real opportunity for your team is consolidation. That goes beyond what this calculator can show. <span class="screen-only">Talk to a ShareGate expert to get a clearer view of your tenant.</span><span class="print-only">For a tailored assessment of your tenant, reach out to us at sharegate.com/contact</span>';
+ctaBtn='See what you\'re missing';
+}else if(isLowMat&&hasLowInputs){
+ctaHeader='Low maturity + low governance hours usually means hidden risk';
+ctaBody='When governance isn\'t actively managed, issues like oversharing, permission drift, and inactive workspaces compound quietly. Cleaning them up later always costs more than staying ahead of them now. Especially if you end up facing a security or compliance issue.\n\nProtect surfaces the highest-priority problems first so you can start governing without a massive time investment. <span class="print-only">For a tailored assessment of your tenant, reach out to us at sharegate.com/contact</span>';
+ctaBtn='See what you\'re missing';
+}
+}
+
+h+='<div class="cta-box"><h3>'+ctaHeader+'</h3>';
+h+='<p style="white-space:pre-line">'+ctaBody+'</p>';
+h+='<div><a href="'+ctaLink+'" class="btn-cta" target="_blank" rel="noopener noreferrer">'+ctaBtn+'</a></div></div>';
+
+h+='<div class="secondary-cta">Download our <a href="https://sharegate.com/guides/it-governance-toolbox" target="_blank" rel="noopener noreferrer">free governance toolbox</a> to get checklists and templates to help you start cleaning up your M365 tenant.</div>';
+
+h+='<button class="pdf-btn" id="pdf-btn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 4.5V1.5h7v3M3.5 10.5H2a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5h10a.5.5 0 01.5.5v4a.5.5 0 01-.5.5h-1.5M3.5 8h7v4.5h-7V8z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Save as PDF</button>';
+h+='</div>';
+app.innerHTML=h;
+
+var tb=document.getElementById('toggle-edit');
+if(tb){tb.addEventListener('click',function(){editOpen=!editOpen;go();});}
+var edits=app.querySelectorAll('.ef input');
+for(var ei=0;ei<edits.length;ei++){edits[ei].addEventListener('input',(function(el){return function(){
+var k=el.getAttribute('data-k'),pos=el.selectionStart;ans[k]=el.value.replace(/[^0-9]/g,'');go();
+var ref=app.querySelector('.ef input[data-k="'+k+'"]');if(ref){ref.focus();try{ref.setSelectionRange(pos,pos);}catch(e){}}
+};})(edits[ei]));}
+var selects=app.querySelectorAll('.ef select');
+for(var si=0;si<selects.length;si++){selects[si].addEventListener('change',(function(el){return function(){ans[el.getAttribute('data-k')]=el.value;go();};})(selects[si]));}
+var pdfBtn=document.getElementById('pdf-btn');
+if(pdfBtn){pdfBtn.addEventListener('click',function(){editOpen=false;go();setTimeout(function(){window.print();},100);});}
+}
+go();
+})();
+</script>
+</body>
+</html>
